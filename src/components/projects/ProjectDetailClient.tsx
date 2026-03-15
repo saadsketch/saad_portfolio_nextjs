@@ -52,90 +52,180 @@ const typeConfig = {
   desktop: { icon: Monitor,    label: "Desktop App"  },
 };
 
-// ── Phone frame for screenshot coverflow ──────────────────────────────────────
-const PHONE_W = 200;
-const PHONE_H = 408;
+// ── Viewport hook ──────────────────────────────────────────────────────────────
+function useViewport() {
+  const [vw, setVw] = useState(0);
+  useEffect(() => {
+    const fn = () => setVw(window.innerWidth);
+    fn();
+    window.addEventListener("resize", fn);
+    return () => window.removeEventListener("resize", fn);
+  }, []);
+  return vw;
+}
 
-function PhoneFrame({ src, title }: { src: string; title: string }) {
-  const pad    = 9;
-  const rOuter = 36;
-  const rInner = 28;
+// ── Frame size per project type + viewport ─────────────────────────────────────
+function getFrameSize(type: string, vw: number) {
+  if (vw === 0) return { w: 200, h: 408, shape: "portrait" as const };
+  if (vw < 640)  return { w: 200, h: 408, shape: "portrait" as const };
+  if (type === "mobile") return { w: 200, h: 408, shape: "portrait" as const };
+  // web / desktop → landscape laptop frame
+  if (vw >= 1280) return { w: 480, h: 316, shape: "landscape" as const };
+  if (vw >= 1024) return { w: 400, h: 264, shape: "landscape" as const };
+  return { w: 320, h: 210, shape: "landscape" as const }; // tablet
+}
+
+// ── Phone frame ────────────────────────────────────────────────────────────────
+function PhoneFrame({ src, title, w, h }: { src: string; title: string; w: number; h: number }) {
+  const pad    = Math.round(w * 0.045);
+  const rOuter = Math.round(w * 0.18);
+  const rInner = Math.round(w * 0.145);
+  const btnH   = Math.round(h * 0.078);
 
   return (
-    <div className="relative flex-shrink-0" style={{ width: PHONE_W, height: PHONE_H }}>
+    <div className="relative flex-shrink-0" style={{ width: w, height: h }}>
       <div
         className="absolute inset-0"
         style={{
           borderRadius: rOuter,
-          background:   "linear-gradient(160deg, #2d2d32, #101013)",
-          border:       "1px solid rgba(255,255,255,0.10)",
-          padding:      pad,
+          background: "linear-gradient(160deg, #2d2d32, #101013)",
+          border: "1px solid rgba(255,255,255,0.10)",
+          padding: pad,
         }}
       >
-        <div
-          className="relative w-full h-full overflow-hidden"
-          style={{ borderRadius: rInner }}
-        >
-          <Image
-            src={src}
-            alt={title}
-            fill
-            sizes={`${PHONE_W}px`}
-            className="object-cover"
-            unoptimized
-          />
-          {/* Dynamic island */}
+        <div className="relative w-full h-full overflow-hidden" style={{ borderRadius: rInner }}>
+          <Image src={src} alt={title} fill sizes={`${w}px`} className="object-cover" unoptimized />
           <div
             className="absolute z-10"
             style={{
-              top: 10, left: "50%", transform: "translateX(-50%)",
-              width: 86, height: 22,
+              top: Math.round(w * 0.04), left: "50%", transform: "translateX(-50%)",
+              width: Math.round(w * 0.43), height: Math.round(w * 0.055),
               background: "#000", borderRadius: 999,
             }}
           />
-          {/* Top gradient */}
-          <div
-            className="absolute inset-x-0 top-0 z-[5]"
-            style={{ height: "16%", background: "linear-gradient(to bottom, rgba(0,0,0,0.32), transparent)" }}
-          />
-          {/* Bottom gradient */}
-          <div
-            className="absolute inset-x-0 bottom-0 z-[5]"
-            style={{ height: "10%", background: "linear-gradient(to top, rgba(0,0,0,0.28), transparent)" }}
-          />
+          <div className="absolute inset-x-0 top-0 z-[5]"
+            style={{ height: "16%", background: "linear-gradient(to bottom, rgba(0,0,0,0.32), transparent)" }} />
+          <div className="absolute inset-x-0 bottom-0 z-[5]"
+            style={{ height: "10%", background: "linear-gradient(to top, rgba(0,0,0,0.28), transparent)" }} />
         </div>
       </div>
-      {/* Power + volume buttons */}
-      <div className="absolute rounded-l-full" style={{ right: -1, top: PHONE_H * 0.28, width: 2, height: 32, background: "rgba(255,255,255,0.10)" }} />
+      <div className="absolute rounded-l-full"
+        style={{ right: -1, top: h * 0.28, width: 2, height: btnH, background: "rgba(255,255,255,0.10)" }} />
       {[0.22, 0.31].map((t, i) => (
-        <div key={i} className="absolute rounded-r-full" style={{ left: -1, top: PHONE_H * t, width: 2, height: 24, background: "rgba(255,255,255,0.10)" }} />
+        <div key={i} className="absolute rounded-r-full"
+          style={{ left: -1, top: h * t, width: 2, height: Math.round(btnH * 0.75), background: "rgba(255,255,255,0.10)" }} />
       ))}
     </div>
   );
 }
 
-// ── Coverflow transform ────────────────────────────────────────────────────────
-function getCoverflowT(offset: number) {
+// ── Laptop / browser frame (landscape) ────────────────────────────────────────
+function LaptopFrame({ src, title, w, h, isDesktop }: {
+  src: string; title: string; w: number; h: number; isDesktop: boolean;
+}) {
+  const bezel  = Math.round(w * 0.022);
+  const barH   = Math.round(h * 0.115);
+  const radius = Math.round(w * 0.022);
+  const innerH = h - bezel * 2 - barH;
+  const innerW = w - bezel * 2;
+
+  return (
+    <div
+      className="relative flex-shrink-0"
+      style={{
+        width: w, height: h,
+        borderRadius: radius + 2,
+        background: "linear-gradient(160deg, #3a3a3c 0%, #1c1c1e 100%)",
+        border: "1.5px solid rgba(255,255,255,0.12)",
+        padding: bezel,
+        boxShadow: "0 24px 64px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.04) inset",
+      }}
+    >
+      <div
+        className="relative overflow-hidden"
+        style={{ width: innerW, height: barH + innerH, borderRadius: radius - 2, background: "#0d0d0f" }}
+      >
+        {/* Title / URL bar */}
+        <div
+          className="flex items-center gap-2 px-3 flex-shrink-0"
+          style={{
+            height: barH,
+            background: isDesktop ? "#2d2d2f" : "#f0f0f2",
+            borderBottom: isDesktop
+              ? "1px solid rgba(255,255,255,0.06)"
+              : "1px solid rgba(0,0,0,0.08)",
+          }}
+        >
+          <div className="flex gap-1.5 flex-shrink-0">
+            {["#ff5f56", "#ffbd2e", "#27c93f"].map((c) => (
+              <div key={c} style={{
+                width: Math.max(6, Math.round(w * 0.014)),
+                height: Math.max(6, Math.round(w * 0.014)),
+                borderRadius: "50%", background: c,
+              }} />
+            ))}
+          </div>
+          {isDesktop ? (
+            <span style={{ fontSize: Math.max(7, Math.round(w * 0.016)), color: "#6e6e73", fontFamily: "monospace" }}>
+              {title}
+            </span>
+          ) : (
+            <div
+              className="flex-1 flex items-center px-2 mx-2"
+              style={{ height: Math.round(barH * 0.55), borderRadius: 999, background: "rgba(0,0,0,0.08)" }}
+            >
+              <span style={{ fontSize: Math.max(7, Math.round(w * 0.016)), color: "#9ca3af", fontFamily: "monospace" }}>
+                {title.toLowerCase().replace(/\s/g, "")}.app
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Screenshot */}
+        <div className="relative" style={{ height: innerH }}>
+          <Image src={src} alt={title} fill sizes={`${w}px`} className="object-cover object-top" unoptimized />
+          <div className="absolute inset-x-0 bottom-0"
+            style={{ height: "12%", background: "linear-gradient(to top, rgba(0,0,0,0.18), transparent)" }} />
+        </div>
+      </div>
+
+      {/* Camera dot */}
+      <div className="absolute" style={{
+        top: Math.round(bezel * 0.55), left: "50%", transform: "translateX(-50%)",
+        width: Math.max(3, Math.round(w * 0.007)),
+        height: Math.max(3, Math.round(w * 0.007)),
+        borderRadius: "50%", background: "rgba(255,255,255,0.15)",
+      }} />
+    </div>
+  );
+}
+
+// ── Coverflow transform (dynamic x-offset based on frame width) ────────────────
+function getCoverflowT(offset: number, frameW: number) {
   const abs = Math.abs(offset);
   const dir = offset > 0 ? 1 : -1;
+  const s1 = 0.78, s2 = 0.62;
+  const x1 = dir * (frameW / 2 + 20 + (frameW * s1) / 2);
+  const x2 = dir * (Math.abs(x1) + (frameW * s1) / 2 + 14 + (frameW * s2) / 2);
 
-  if (abs === 0) return { x: 0,         rotateY: 0,        scale: 1,    opacity: 1,    z: 80, zIdx: 20 };
-  if (abs === 1) return { x: dir * 210, rotateY: dir * -52, scale: 0.78, opacity: 0.72, z: 30, zIdx: 15 };
-  if (abs === 2) return { x: dir * 350, rotateY: dir * -68, scale: 0.62, opacity: 0.38, z: 8,  zIdx: 10 };
+  if (abs === 0) return { x: 0,  rotateY: 0,         scale: 1,  opacity: 1,    z: 80, zIdx: 20 };
+  if (abs === 1) return { x: x1, rotateY: dir * -52,  scale: s1, opacity: 0.72, z: 30, zIdx: 15 };
+  if (abs === 2) return { x: x2, rotateY: dir * -68,  scale: s2, opacity: 0.38, z: 8,  zIdx: 10 };
   return null;
 }
 
 // ── Screenshot coverflow carousel ─────────────────────────────────────────────
 function ScreenshotCoverflow({
-  screenshots,
-  title,
-  pal,
+  screenshots, title, projectType, pal,
 }: {
   screenshots: string[];
   title: string;
+  projectType: string;
   pal: { a: string; b: string };
 }) {
   const [active, setActive] = useState(0);
+  const vw    = useViewport();
+  const { w, h, shape } = getFrameSize(projectType, vw);
   const total = screenshots.length;
 
   const go = useCallback(
@@ -151,14 +241,12 @@ function ScreenshotCoverflow({
     [go],
   );
 
-  const stageH = PHONE_H + 20;
-
   return (
     <div className="select-none">
       {/* Stage */}
       <motion.div
         className="relative overflow-hidden cursor-grab active:cursor-grabbing"
-        style={{ height: stageH, perspective: "1100px" }}
+        style={{ height: h + 20, perspective: "1200px" }}
         drag="x"
         dragConstraints={{ left: 0, right: 0 }}
         dragElastic={0.1}
@@ -166,7 +254,7 @@ function ScreenshotCoverflow({
       >
         {screenshots.map((src, i) => {
           const offset = i - active;
-          const t      = getCoverflowT(offset);
+          const t      = getCoverflowT(offset, w);
           if (!t) return null;
 
           return (
@@ -174,18 +262,20 @@ function ScreenshotCoverflow({
               key={i}
               className="absolute"
               style={{
-                left:       "50%",
-                top:        "50%",
-                marginLeft: -(PHONE_W / 2),
-                marginTop:  -(PHONE_H / 2),
-                zIndex:     t.zIdx,
-                cursor:     offset !== 0 ? "pointer" : "default",
+                left: "50%", top: "50%",
+                marginLeft: -(w / 2), marginTop: -(h / 2),
+                zIndex: t.zIdx,
+                cursor: offset !== 0 ? "pointer" : "default",
               }}
               animate={{ x: t.x, rotateY: t.rotateY, scale: t.scale, opacity: t.opacity, z: t.z }}
               transition={{ type: "spring", stiffness: 260, damping: 28 }}
               onClick={() => offset !== 0 && setActive(i)}
             >
-              <PhoneFrame src={src} title={title} />
+              {shape === "landscape" ? (
+                <LaptopFrame src={src} title={title} w={w} h={h} isDesktop={projectType === "desktop"} />
+              ) : (
+                <PhoneFrame src={src} title={title} w={w} h={h} />
+              )}
             </motion.div>
           );
         })}
@@ -373,6 +463,7 @@ export default function ProjectDetailClient({
                 <ScreenshotCoverflow
                   screenshots={project.screenshots}
                   title={project.title}
+                  projectType={project.type}
                   pal={pal}
                 />
               </div>

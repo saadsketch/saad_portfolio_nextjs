@@ -69,8 +69,24 @@ function TabBar({ active, onChange }: { active: Tab; onChange: (t: Tab) => void 
   );
 }
 
-// ── Responsive coverflow config ────────────────────────────────────────────────
-function useCoverflowConfig() {
+// ── Frame size per project type + viewport ─────────────────────────────────────
+type FrameShape = "portrait" | "landscape";
+interface FrameSize { w: number; h: number; shape: FrameShape }
+
+function getSize(type: string, vw: number): FrameSize {
+  if (vw === 0) return { w: 188, h: 384, shape: "portrait" };   // SSR-safe
+  if (vw < 640) return { w: 148, h: 302, shape: "portrait" };   // all frames small on mobile vp
+
+  if (type === "mobile") return { w: 188, h: 384, shape: "portrait" };
+
+  // web / desktop → landscape laptop frame
+  if (vw >= 1280) return { w: 440, h: 290, shape: "landscape" };
+  if (vw >= 1024) return { w: 360, h: 238, shape: "landscape" };
+  return { w: 280, h: 185, shape: "landscape" };                 // tablet
+}
+
+// ── Responsive viewport hook ───────────────────────────────────────────────────
+function useViewport() {
   const [vw, setVw] = useState(0);
   useEffect(() => {
     const fn = () => setVw(window.innerWidth);
@@ -78,45 +94,46 @@ function useCoverflowConfig() {
     window.addEventListener("resize", fn);
     return () => window.removeEventListener("resize", fn);
   }, []);
-  const isMobile = vw > 0 && vw < 640;
-  const isTablet = vw >= 640 && vw < 1024;
   return {
-    phoneW: isMobile ? 148 : 188,
-    phoneH: isMobile ? 302 : 384,
-    isMobile,
-    isTablet,
+    vw,
+    isMobile: vw > 0 && vw < 640,
+    isTablet: vw >= 640 && vw < 1024,
   };
 }
 
-// ── 3D coverflow transform ─────────────────────────────────────────────────────
-function getT(offset: number, isMobile: boolean, isTablet: boolean) {
+// ── 3D coverflow transform (dynamic x-offset based on card widths) ─────────────
+function getT(
+  offset: number,
+  isMobile: boolean,
+  isTablet: boolean,
+  centerW: number,
+  sideW: number,
+) {
   const abs = Math.abs(offset);
   const dir = offset > 0 ? 1 : -1;
-  if (abs === 0) return { x: 0,         rotateY: 0,        scale: 1,    opacity: 1,    z: 80, zIdx: 20 };
+  if (abs === 0) return { x: 0, rotateY: 0, scale: 1, opacity: 1, z: 80, zIdx: 20 };
   if (isMobile)  return null;
-  if (abs === 1) return { x: dir * 190, rotateY: dir * -54, scale: 0.78, opacity: 0.72, z: 30, zIdx: 15 };
+
+  const s1 = 0.78;
+  const s2 = 0.62;
+  const x1 = dir * (centerW / 2 + 20 + (sideW * s1) / 2);
+  const x2 = dir * (Math.abs(x1) + (sideW * s1) / 2 + 14 + (sideW * s2) / 2);
+
+  if (abs === 1) return { x: x1, rotateY: dir * -52, scale: s1,  opacity: 0.72, z: 30, zIdx: 15 };
   if (!isTablet && abs === 2)
-                 return { x: dir * 310, rotateY: dir * -70, scale: 0.62, opacity: 0.36, z: 8,  zIdx: 10 };
+                 return { x: x2, rotateY: dir * -68, scale: s2,  opacity: 0.34, z: 8,  zIdx: 10 };
   return null;
 }
 
-// ── Device frame props ─────────────────────────────────────────────────────────
-interface FrameProps {
-  src: string;
-  title: string;
-  phoneW: number;
-  phoneH: number;
-}
-
-// ── Mobile phone frame ─────────────────────────────────────────────────────────
-function PhoneFrame({ src, title, phoneW, phoneH }: FrameProps) {
-  const pad    = Math.round(phoneW * 0.043);
-  const rOuter = Math.round(phoneW * 0.17);
-  const rInner = Math.round(phoneW * 0.138);
-  const btnH   = Math.round(phoneH * 0.078);
+// ── Phone frame ────────────────────────────────────────────────────────────────
+function PhoneFrame({ src, title, w, h }: { src: string; title: string; w: number; h: number }) {
+  const pad    = Math.round(w * 0.043);
+  const rOuter = Math.round(w * 0.17);
+  const rInner = Math.round(w * 0.138);
+  const btnH   = Math.round(h * 0.078);
 
   return (
-    <div className="relative flex-shrink-0" style={{ width: phoneW, height: phoneH }}>
+    <div className="relative flex-shrink-0" style={{ width: w, height: h }}>
       <div
         className="absolute inset-0"
         style={{
@@ -127,13 +144,12 @@ function PhoneFrame({ src, title, phoneW, phoneH }: FrameProps) {
         }}
       >
         <div className="relative w-full h-full overflow-hidden" style={{ borderRadius: rInner }}>
-          <Image src={src} alt={title} fill sizes={`${phoneW}px`} className="object-cover" unoptimized />
-          {/* Dynamic island */}
+          <Image src={src} alt={title} fill sizes={`${w}px`} className="object-cover" unoptimized />
           <div
             className="absolute z-10"
             style={{
-              top: Math.round(phoneW * 0.04), left: "50%", transform: "translateX(-50%)",
-              width: Math.round(phoneW * 0.43), height: Math.round(phoneW * 0.054),
+              top: Math.round(w * 0.04), left: "50%", transform: "translateX(-50%)",
+              width: Math.round(w * 0.43), height: Math.round(w * 0.054),
               background: "#000", borderRadius: 999,
             }}
           />
@@ -143,129 +159,135 @@ function PhoneFrame({ src, title, phoneW, phoneH }: FrameProps) {
             style={{ height: "10%", background: "linear-gradient(to top, rgba(0,0,0,0.25), transparent)" }} />
         </div>
       </div>
-      {/* Buttons */}
       <div className="absolute rounded-l-full"
-        style={{ right: -1, top: phoneH * 0.28, width: 2, height: btnH, background: "rgba(255,255,255,0.10)" }} />
+        style={{ right: -1, top: h * 0.28, width: 2, height: btnH, background: "rgba(255,255,255,0.10)" }} />
       {[0.22, 0.32].map((t, i) => (
         <div key={i} className="absolute rounded-r-full"
-          style={{ left: -1, top: phoneH * t, width: 2, height: Math.round(btnH * 0.75), background: "rgba(255,255,255,0.10)" }} />
+          style={{ left: -1, top: h * t, width: 2, height: Math.round(btnH * 0.75), background: "rgba(255,255,255,0.10)" }} />
       ))}
     </div>
   );
 }
 
-// ── Browser frame (web apps) ───────────────────────────────────────────────────
-function BrowserFrame({ src, title, phoneW, phoneH }: FrameProps) {
-  const BAR_H   = 36;
-  const screenH = phoneH - BAR_H;
-
-  return (
-    <div
-      className="relative flex-shrink-0 overflow-hidden"
-      style={{ width: phoneW, height: phoneH, borderRadius: 14, border: "1px solid #e5e7eb" }}
-    >
-      {/* Browser chrome */}
-      <div
-        className="flex items-center gap-2 px-3"
-        style={{ height: BAR_H, background: "#f3f4f6", borderBottom: "1px solid #e5e7eb" }}
-      >
-        {/* Traffic lights */}
-        <div className="flex gap-1.5 flex-shrink-0">
-          {["#ff5f56", "#ffbd2e", "#27c93f"].map((c) => (
-            <div key={c} style={{ width: 7, height: 7, borderRadius: "50%", background: c }} />
-          ))}
-        </div>
-        {/* URL bar */}
-        <div
-          className="flex-1 flex items-center px-2"
-          style={{ height: 18, borderRadius: 9, background: "#e5e7eb" }}
-        >
-          <span style={{ fontSize: 7, color: "#9ca3af", fontFamily: "monospace", letterSpacing: 0 }}>
-            app.example.com
-          </span>
-        </div>
-      </div>
-
-      {/* Screenshot */}
-      <div className="relative" style={{ height: screenH }}>
-        <Image src={src} alt={title} fill sizes={`${phoneW}px`}
-          className="object-cover object-top" unoptimized />
-        <div className="absolute inset-x-0 bottom-0"
-          style={{ height: "10%", background: "linear-gradient(to top, rgba(0,0,0,0.12), transparent)" }} />
-      </div>
-    </div>
-  );
-}
-
-// ── OS Window frame (desktop apps) ────────────────────────────────────────────
-function WindowFrame({ src, title, phoneW, phoneH }: FrameProps) {
-  const TITLE_H = 28;
-  const MENU_H  = 20;
-  const screenH = phoneH - TITLE_H - MENU_H;
-
-  return (
-    <div
-      className="relative flex-shrink-0 overflow-hidden"
-      style={{ width: phoneW, height: phoneH, borderRadius: 12, border: "1px solid rgba(0,0,0,0.18)" }}
-    >
-      {/* Title bar */}
-      <div
-        className="flex items-center px-3 gap-2"
-        style={{ height: TITLE_H, background: "#1c1c1e" }}
-      >
-        <div className="flex gap-1.5 flex-shrink-0">
-          {["#ff5f56", "#ffbd2e", "#27c93f"].map((c) => (
-            <div key={c} style={{ width: 7, height: 7, borderRadius: "50%", background: c }} />
-          ))}
-        </div>
-        <span
-          className="flex-1 text-center"
-          style={{ fontSize: 8, color: "#8e8e93", overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis", paddingRight: 28 }}
-        >
-          {title}
-        </span>
-      </div>
-
-      {/* Menu bar */}
-      <div
-        className="flex items-center gap-3 px-3"
-        style={{ height: MENU_H, background: "#f9fafb", borderBottom: "1px solid #e5e7eb" }}
-      >
-        {["File", "Edit", "View", "Window", "Help"].map((m) => (
-          <span key={m} style={{ fontSize: 7, color: "#6b7280" }}>{m}</span>
-        ))}
-      </div>
-
-      {/* Screenshot */}
-      <div className="relative" style={{ height: screenH }}>
-        <Image src={src} alt={title} fill sizes={`${phoneW}px`}
-          className="object-cover object-top" unoptimized />
-        <div className="absolute inset-x-0 bottom-0"
-          style={{ height: "10%", background: "linear-gradient(to top, rgba(0,0,0,0.12), transparent)" }} />
-      </div>
-    </div>
-  );
-}
-
-// ── Device card: picks frame by project type ───────────────────────────────────
-function DeviceCard({ project, phoneW, phoneH }: {
-  project: (typeof projectsData)[0];
-  phoneW: number;
-  phoneH: number;
+// ── Laptop / browser frame (landscape) ────────────────────────────────────────
+function LaptopFrame({ src, title, w, h, isDesktop }: {
+  src: string; title: string; w: number; h: number; isDesktop: boolean;
 }) {
-  const props = { src: project.screenshot, title: project.title, phoneW, phoneH };
-  if (project.type === "web")     return <BrowserFrame {...props} />;
-  if (project.type === "desktop") return <WindowFrame  {...props} />;
-  return <PhoneFrame {...props} />;
+  const bezel  = Math.round(w * 0.022);
+  const barH   = Math.round(h * 0.115);
+  const radius = Math.round(w * 0.022);
+  const innerH = h - bezel * 2 - barH;
+  const innerW = w - bezel * 2;
+
+  return (
+    <div
+      className="relative flex-shrink-0"
+      style={{
+        width: w, height: h,
+        borderRadius: radius + 2,
+        background: "linear-gradient(160deg, #3a3a3c 0%, #1c1c1e 100%)",
+        border: "1.5px solid rgba(255,255,255,0.12)",
+        padding: bezel,
+        boxShadow: "0 24px 64px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.04) inset",
+      }}
+    >
+      {/* Screen area */}
+      <div
+        className="relative overflow-hidden"
+        style={{ width: innerW, height: barH + innerH, borderRadius: radius - 2, background: "#0d0d0f" }}
+      >
+        {/* Title bar */}
+        <div
+          className="flex items-center gap-2 px-3 flex-shrink-0"
+          style={{
+            height: barH,
+            background: isDesktop ? "#2d2d2f" : "#f0f0f2",
+            borderBottom: isDesktop
+              ? "1px solid rgba(255,255,255,0.06)"
+              : "1px solid rgba(0,0,0,0.08)",
+          }}
+        >
+          {/* Traffic lights */}
+          <div className="flex gap-1.5 flex-shrink-0">
+            {["#ff5f56", "#ffbd2e", "#27c93f"].map((c) => (
+              <div key={c} style={{ width: Math.max(6, Math.round(w * 0.014)), height: Math.max(6, Math.round(w * 0.014)), borderRadius: "50%", background: c }} />
+            ))}
+          </div>
+          {/* URL / title bar */}
+          {isDesktop ? (
+            <div className="flex items-center gap-2 flex-1 px-2">
+              <span style={{ fontSize: Math.max(7, Math.round(w * 0.016)), color: "#6e6e73", fontFamily: "monospace" }}>
+                {title}
+              </span>
+            </div>
+          ) : (
+            <div
+              className="flex-1 flex items-center px-2 mx-2"
+              style={{ height: Math.round(barH * 0.55), borderRadius: 999, background: "rgba(0,0,0,0.08)" }}
+            >
+              <span style={{ fontSize: Math.max(7, Math.round(w * 0.016)), color: "#9ca3af", fontFamily: "monospace" }}>
+                {title.toLowerCase().replace(/\s/g, "")}.app
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Screenshot */}
+        <div className="relative" style={{ height: innerH }}>
+          <Image
+            src={src} alt={title} fill
+            sizes={`${w}px`}
+            className="object-cover object-top"
+            unoptimized
+          />
+          <div
+            className="absolute inset-x-0 bottom-0"
+            style={{ height: "12%", background: "linear-gradient(to top, rgba(0,0,0,0.18), transparent)" }}
+          />
+        </div>
+      </div>
+
+      {/* Camera dot */}
+      <div
+        className="absolute"
+        style={{
+          top: Math.round(bezel * 0.55),
+          left: "50%", transform: "translateX(-50%)",
+          width: Math.max(3, Math.round(w * 0.007)),
+          height: Math.max(3, Math.round(w * 0.007)),
+          borderRadius: "50%",
+          background: "rgba(255,255,255,0.15)",
+        }}
+      />
+    </div>
+  );
+}
+
+// ── Device card: picks frame by type + shape ───────────────────────────────────
+function DeviceCard({ project, w, h, shape }: {
+  project: (typeof projectsData)[0];
+  w: number; h: number; shape: FrameShape;
+}) {
+  if (shape === "landscape") {
+    return (
+      <LaptopFrame
+        src={project.screenshot}
+        title={project.title}
+        w={w} h={h}
+        isDesktop={project.type === "desktop"}
+      />
+    );
+  }
+  return <PhoneFrame src={project.screenshot} title={project.title} w={w} h={h} />;
 }
 
 // ── Main section ───────────────────────────────────────────────────────────────
 export default function Projects() {
-  const [tab, setTab]     = useState<Tab>("All");
+  const [tab, setTab]       = useState<Tab>("All");
   const [active, setActive] = useState(0);
   const [paused, setPaused] = useState(false);
 
-  const { phoneW, phoneH, isMobile, isTablet } = useCoverflowConfig();
+  const { vw, isMobile, isTablet } = useViewport();
 
   // Filtered list
   const filtered = tab === "All"
@@ -277,23 +299,19 @@ export default function Projects() {
         return false;
       });
 
-  // Reset on filter change
   useEffect(() => { setActive(0); setPaused(false); }, [tab]);
 
   const go = useCallback(
-    (dir: 1 | -1) =>
-      setActive((p) => ((p + dir + filtered.length) % filtered.length)),
+    (dir: 1 | -1) => setActive((p) => ((p + dir + filtered.length) % filtered.length)),
     [filtered.length],
   );
 
-  // Auto-advance
   useEffect(() => {
     if (paused || filtered.length <= 1) return;
     const t = setInterval(() => go(1), 4000);
     return () => clearInterval(t);
   }, [paused, go, filtered.length]);
 
-  // Swipe
   const handleDragEnd = useCallback((_: unknown, info: PanInfo) => {
     if (info.offset.x < -40) go(1);
     else if (info.offset.x > 40) go(-1);
@@ -304,7 +322,12 @@ export default function Projects() {
   const pal      = palettes[palIdx % palettes.length];
   const cfg      = typeConfig[project.type];
   const TypeIcon = cfg.icon;
-  const stageH   = phoneH + 24;
+
+  // Center card dimensions
+  const centerSize = getSize(project.type, vw);
+
+  // Stage height: tallest visible card + padding
+  const stageH = Math.max(...filtered.map((p) => getSize(p.type, vw).h)) + 40;
 
   return (
     <section id="projects" className="section-padding bg-white overflow-hidden">
@@ -406,15 +429,16 @@ export default function Projects() {
             {/* Stage */}
             <motion.div
               className="relative overflow-hidden cursor-grab active:cursor-grabbing"
-              style={{ height: stageH, perspective: "1100px" }}
+              style={{ height: stageH, perspective: "1200px" }}
               drag="x"
               dragConstraints={{ left: 0, right: 0 }}
               dragElastic={0.1}
               onDragEnd={handleDragEnd}
             >
               {filtered.map((p, i) => {
-                const offset = i - active;
-                const tr     = getT(offset, isMobile, isTablet);
+                const offset   = i - active;
+                const { w, h, shape } = getSize(p.type, vw);
+                const tr = getT(offset, isMobile, isTablet, centerSize.w, w);
                 if (!tr) return null;
 
                 return (
@@ -424,8 +448,8 @@ export default function Projects() {
                     style={{
                       left:       "50%",
                       top:        "50%",
-                      marginLeft: -(phoneW / 2),
-                      marginTop:  -(phoneH / 2),
+                      marginLeft: -(w / 2),
+                      marginTop:  -(h / 2),
                       zIndex:     tr.zIdx,
                       cursor:     offset !== 0 ? "pointer" : "default",
                     }}
@@ -436,7 +460,7 @@ export default function Projects() {
                     transition={{ type: "spring", stiffness: 260, damping: 28 }}
                     onClick={() => offset !== 0 && setActive(i)}
                   >
-                    <DeviceCard project={p} phoneW={phoneW} phoneH={phoneH} />
+                    <DeviceCard project={p} w={w} h={h} shape={shape} />
                   </motion.div>
                 );
               })}
