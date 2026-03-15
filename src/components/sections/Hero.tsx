@@ -6,13 +6,7 @@ import { Button } from "@/components/ui/button";
 import TypewriterText from "@/components/animations/TypewriterText";
 import DotGrid from "@/components/animations/DotGrid";
 import PhoneMockup from "@/components/animations/PhoneMockup";
-
-const roles = [
-  "Flutter Mobile Developer",
-  "Full Stack Web Developer",
-  "Desktop App Developer",
-  "UI/UX Enthusiast",
-];
+import { siteConfig } from "@/config/site";
 
 const stagger = {
   hidden: {},
@@ -90,12 +84,12 @@ export default function Hero() {
               variants={item}
               className="text-xl sm:text-2xl font-semibold text-gray-500 mb-1 h-9 flex items-center"
             >
-              <TypewriterText texts={roles} className="text-indigo-600" />
+              <TypewriterText texts={[...siteConfig.roles]} className="text-indigo-600" />
             </motion.div>
 
             {/* Years badge */}
             <motion.p variants={item} className="text-sm text-gray-400 font-medium mb-6 tracking-wide">
-              5+ Years of Professional Experience
+              {siteConfig.yearsExp} Years of Professional Experience
             </motion.p>
 
             {/* Bio */}
@@ -103,11 +97,7 @@ export default function Hero() {
               variants={item}
               className="text-base sm:text-lg text-gray-500 max-w-xl mb-8 leading-relaxed"
             >
-              I craft high-performance cross-platform apps with{" "}
-              <span className="font-semibold text-gray-800">Flutter</span> for mobile &amp; desktop,
-              and build scalable web platforms with{" "}
-              <span className="font-semibold text-gray-800">Next.js</span>. Turning complex ideas
-              into smooth, user-loved products.
+              {siteConfig.bio}
             </motion.p>
 
             {/* CTAs */}
@@ -133,8 +123,8 @@ export default function Hero() {
             {/* Socials */}
             <motion.div variants={item} className="flex items-center gap-3">
               {[
-                { icon: Github, href: "https://github.com", label: "GitHub" },
-                { icon: Linkedin, href: "https://linkedin.com", label: "LinkedIn" },
+                { icon: Github, href: siteConfig.github, label: "GitHub" },
+                { icon: Linkedin, href: siteConfig.linkedin, label: "LinkedIn" },
               ].map(({ icon: Icon, href, label }) => (
                 <a
                   key={label}

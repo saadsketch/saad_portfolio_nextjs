@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { projectsData } from "@/data/projects";
 import ProjectDetailClient from "./ProjectDetailClient";
+import { siteConfig } from "@/config/site";
 
 // ── Static params for build-time generation ────────────────────────────────────
 export function generateStaticParams() {
@@ -18,7 +19,7 @@ export function generateMetadata({
   const project = projectsData.find((p) => p.slug === params.slug);
   if (!project) return {};
   return {
-    title: `${project.title} — Saad`,
+    title: `${project.title} — ${siteConfig.name}`,
     description: project.description,
   };
 }

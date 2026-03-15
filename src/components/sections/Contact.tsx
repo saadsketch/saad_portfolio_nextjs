@@ -4,12 +4,13 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Github, Linkedin, Mail, Twitter, Send, CheckCircle } from "lucide-react";
+import { Send, CheckCircle } from "lucide-react";
 import FadeIn from "@/components/animations/FadeIn";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { siteConfig, socialLinks } from "@/config/site";
 
 const contactSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -19,36 +20,6 @@ const contactSchema = z.object({
 
 type ContactFormData = z.infer<typeof contactSchema>;
 
-const socialLinks = [
-  {
-    icon: Github,
-    label: "GitHub",
-    handle: "@yourusername",
-    href: "https://github.com",
-    color: "hover:text-gray-900",
-  },
-  {
-    icon: Linkedin,
-    label: "LinkedIn",
-    handle: "Saad",
-    href: "https://linkedin.com",
-    color: "hover:text-blue-600",
-  },
-  {
-    icon: Twitter,
-    label: "Twitter",
-    handle: "@yourusername",
-    href: "https://twitter.com",
-    color: "hover:text-sky-500",
-  },
-  {
-    icon: Mail,
-    label: "Email",
-    handle: "your@email.com",
-    href: "mailto:your@email.com",
-    color: "hover:text-indigo-600",
-  },
-];
 
 export default function Contact() {
   const [submitted, setSubmitted] = useState(false);
@@ -68,7 +39,7 @@ export default function Contact() {
     const body = encodeURIComponent(
       `Name: ${data.name}\nEmail: ${data.email}\n\nMessage:\n${data.message}`
     );
-    window.location.href = `mailto:your@email.com?subject=${subject}&body=${body}`;
+    window.location.href = `mailto:${siteConfig.email}?subject=${subject}&body=${body}`;
     setSubmitted(true);
     reset();
     setTimeout(() => setSubmitted(false), 5000);

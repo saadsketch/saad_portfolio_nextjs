@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import { siteConfig } from "@/config/site";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -9,14 +10,13 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Saad — Full Stack Developer",
-  description:
-    "Portfolio of Saad, a Full Stack Developer specializing in React, Next.js, and Node.js. Building fast, accessible, and beautiful web applications.",
-  keywords: ["developer", "portfolio", "React", "Next.js", "TypeScript", "Full Stack"],
-  authors: [{ name: "Saad" }],
+  title: siteConfig.title,
+  description: siteConfig.description,
+  keywords: [...siteConfig.keywords],
+  authors: [{ name: siteConfig.name }],
   openGraph: {
-    title: "Saad — Full Stack Developer",
-    description: "Building fast, accessible, and beautiful web applications.",
+    title: siteConfig.title,
+    description: siteConfig.description,
     type: "website",
   },
 };

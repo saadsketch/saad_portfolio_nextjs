@@ -1,20 +1,14 @@
 "use client";
 
-import { Github, Linkedin, Mail, Twitter, ArrowUp } from "lucide-react";
-
-const socialLinks = [
-  { icon: Github, label: "GitHub", href: "https://github.com" },
-  { icon: Linkedin, label: "LinkedIn", href: "https://linkedin.com" },
-  { icon: Twitter, label: "Twitter", href: "https://twitter.com" },
-  { icon: Mail, label: "Email", href: "mailto:your@email.com" },
-];
+import { ArrowUp } from "lucide-react";
+import { siteConfig, socialLinks } from "@/config/site";
 
 export default function Footer() {
   return (
     <footer className="border-t border-gray-100 bg-white">
       <div className="container-max section-padding py-8 flex flex-col sm:flex-row items-center justify-between gap-4">
         <p className="text-sm text-gray-500">
-          © {new Date().getFullYear()} Saad. Built with Next.js & Tailwind CSS.
+          © {new Date().getFullYear()} {siteConfig.name}. Built with Next.js &amp; Tailwind CSS.
         </p>
 
         <div className="flex items-center gap-4">
