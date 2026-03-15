@@ -1,23 +1,5 @@
-export interface WorkItem {
-  role: string;
-  company: string;
-  period: string;
-  location: string;
-  color: string;       // accent color
-  tags: string[];
-  bullets: string[];
-}
-
-export interface EducationItem {
-  degree: string;
-  field: string;
-  institution: string;
-  period: string;
-  location: string;
-  grade: string;
-  color: string;
-  bullets: string[];
-}
+import type { WorkItem, EducationItem } from "@/types";
+export type { WorkItem, EducationItem };
 
 export const workData: WorkItem[] = [
   {

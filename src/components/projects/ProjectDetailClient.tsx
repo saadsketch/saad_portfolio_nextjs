@@ -15,7 +15,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
-import type { Project } from "@/data/projects";
+import type { Project } from "@/types";
 
 const CDN = "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons";
 

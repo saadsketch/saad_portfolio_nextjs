@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { projectsData } from "@/data/projects";
-import ProjectDetailClient from "./ProjectDetailClient";
+import ProjectDetailClient from "@/components/projects/ProjectDetailClient";
 import { siteConfig } from "@/config/site";
 
 // ── Static params for build-time generation ────────────────────────────────────
