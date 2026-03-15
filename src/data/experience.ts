@@ -1,23 +1,36 @@
-export interface ExperienceItem {
+export interface WorkItem {
   role: string;
   company: string;
   period: string;
   location: string;
-  type: "work" | "education";
+  color: string;       // accent color
+  tags: string[];
   bullets: string[];
 }
 
-export const experienceData: ExperienceItem[] = [
+export interface EducationItem {
+  degree: string;
+  field: string;
+  institution: string;
+  period: string;
+  location: string;
+  grade: string;
+  color: string;
+  bullets: string[];
+}
+
+export const workData: WorkItem[] = [
   {
     role: "Senior Flutter Developer",
     company: "Tech Solutions Ltd.",
     period: "2022 — Present",
     location: "Remote",
-    type: "work",
+    color: "#6366f1",
+    tags: ["Flutter", "Dart", "Firebase", "GetX", "Stripe"],
     bullets: [
       "Architected and shipped 5 production Flutter apps (iOS + Android) with 100k+ combined downloads",
       "Led a team of 4 developers, conducting code reviews and defining Flutter best practices",
-      "Reduced app startup time by 45% through lazy loading and code splitting",
+      "Reduced app startup time by 45% through lazy loading and Dart isolates",
       "Integrated complex third-party APIs including Stripe, Twilio, and Google Maps",
     ],
   },
@@ -26,36 +39,44 @@ export const experienceData: ExperienceItem[] = [
     company: "Digital Innovations Agency",
     period: "2020 — 2022",
     location: "Lahore, Pakistan",
-    type: "work",
+    color: "#06B6D4",
+    tags: ["Flutter", "Dart", "REST APIs", "CI/CD", "Fastlane"],
     bullets: [
-      "Delivered 8 cross-platform mobile applications for clients across e-commerce, health, and fintech sectors",
+      "Delivered 8 cross-platform mobile apps for e-commerce, health, and fintech clients",
       "Built reusable Flutter widget libraries that cut development time by 30%",
-      "Implemented CI/CD pipelines with GitHub Actions and Fastlane for automated app store deployment",
-      "Collaborated closely with UI/UX designers to achieve pixel-perfect implementations",
+      "Implemented CI/CD pipelines with GitHub Actions and Fastlane for automated deployments",
+      "Collaborated with UI/UX designers to achieve pixel-perfect, accessible interfaces",
     ],
   },
+];
+
+export const educationData: EducationItem[] = [
   {
-    role: "Junior Mobile Developer",
-    company: "StartupXYZ",
-    period: "2019 — 2020",
-    location: "Karachi, Pakistan",
-    type: "work",
-    bullets: [
-      "Built and maintained 3 Flutter mobile applications from scratch",
-      "Integrated Firebase (Auth, Firestore, Push Notifications, Crashlytics)",
-      "Implemented state management using Provider and later migrated to Riverpod",
-    ],
-  },
-  {
-    role: "B.S. Computer Science",
-    company: "University of Engineering & Technology",
-    period: "2015 — 2019",
+    degree: "Master of Computer Applications",
+    field: "MCA",
+    institution: "University of Engineering & Technology",
+    period: "2021 — 2023",
     location: "Lahore, Pakistan",
-    type: "education",
+    grade: "GPA: 3.8 / 4.0",
+    color: "#8B5CF6",
     bullets: [
-      "Graduated with Distinction — GPA: 3.7/4.0",
-      "Relevant coursework: Mobile Application Development, Software Engineering, Database Systems",
-      "Final year project: Cross-platform food delivery app built with Flutter and Node.js",
+      "Specialized in Mobile & Cloud Computing with a focus on cross-platform development",
+      "Thesis: Performance optimization techniques for Flutter applications on low-end devices",
+      "Recipient of Academic Excellence Award — two consecutive semesters",
+    ],
+  },
+  {
+    degree: "Bachelor of Computer Applications",
+    field: "BCA",
+    institution: "Government College University",
+    period: "2018 — 2021",
+    location: "Lahore, Pakistan",
+    grade: "GPA: 3.6 / 4.0",
+    color: "#EC4899",
+    bullets: [
+      "Graduated with Distinction — top 5% of graduating class",
+      "Core coursework: Data Structures, OOP, DBMS, Software Engineering, Web Technologies",
+      "Final project: Flutter-based campus management app adopted by the college administration",
     ],
   },
 ];

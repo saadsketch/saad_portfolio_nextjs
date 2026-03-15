@@ -20,8 +20,8 @@ export const siteConfig = {
 
   // ── Links ─────────────────────────────────────────────────────────────────────
   email: "your@email.com",
-  github: "https://github.com",
-  linkedin: "https://linkedin.com",
+  github: "https://github.com/saadsketch",
+  linkedin: "https://www.linkedin.com/in/saad-a92888234/",
   twitter: "https://twitter.com",
   cvUrl: "#",
 } as const;
@@ -31,7 +31,7 @@ export const socialLinks = [
   {
     icon: Github,
     label: "GitHub",
-    handle: "@yourusername",
+    handle: "@saadsketch",
     href: siteConfig.github,
     color: "hover:text-gray-900",
   },
