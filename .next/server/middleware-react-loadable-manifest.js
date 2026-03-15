@@ -1,0 +1,1 @@
+self.__REACT_LOADABLE_MANIFEST="{\"components/sections/Skills.tsx -> animejs\":{\"id\":\"components/sections/Skills.tsx -> animejs\",\"files\":[\"static/chunks/_app-pages-browser_node_modules_animejs_dist_modules_index_js.js\"]}}"

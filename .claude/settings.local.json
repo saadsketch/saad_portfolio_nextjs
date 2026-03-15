@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:animejs.com)",
+      "Bash(npm install:*)",
+      "WebFetch(domain:motion.dev)",
+      "WebSearch",
+      "WebFetch(domain:dev.to)",
+      "WebFetch(domain:blog.bitsrc.io)",
+      "Bash(export PATH=\"/usr/local/bin:/usr/bin:/bin:/opt/homebrew/bin:$PATH\")",
+      "Bash(npx tsc:*)"
+    ]
+  }
+}

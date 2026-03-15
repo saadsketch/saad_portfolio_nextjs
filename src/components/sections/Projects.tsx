@@ -1,246 +1,373 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { ExternalLink, Github, ChevronLeft, ChevronRight, Smartphone, Globe, Monitor } from "lucide-react";
-import FadeIn from "@/components/animations/FadeIn";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { useState, useCallback, useEffect, useRef } from "react";
+import { motion, PanInfo } from "framer-motion";
+import { ChevronLeft, ChevronRight, ArrowUpRight, Smartphone, Globe, Monitor } from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
 import { projectsData } from "@/data/projects";
+import FadeIn from "@/components/animations/FadeIn";
 
-const typeIcons = {
-  mobile: { icon: Smartphone, label: "Mobile App", color: "text-blue-500 bg-blue-50" },
-  web: { icon: Globe, label: "Web App", color: "text-green-500 bg-green-50" },
-  desktop: { icon: Monitor, label: "Desktop App", color: "text-purple-500 bg-purple-50" },
-};
-
-const cardColors = [
-  "from-indigo-50 to-blue-50",
-  "from-violet-50 to-purple-50",
-  "from-sky-50 to-cyan-50",
-  "from-rose-50 to-pink-50",
-  "from-amber-50 to-yellow-50",
-  "from-emerald-50 to-teal-50",
+// ── Palettes ───────────────────────────────────────────────────────────────────
+const palettes = [
+  { a: "#6366f1", b: "#8B5CF6" },
+  { a: "#06B6D4", b: "#3B82F6" },
+  { a: "#F59E0B", b: "#F97316" },
+  { a: "#10B981", b: "#059669" },
+  { a: "#EC4899", b: "#8B5CF6" },
+  { a: "#EF4444", b: "#F97316" },
 ];
 
-export default function Projects() {
-  const [current, setCurrent] = useState(0);
-  const [direction, setDirection] = useState(1);
-  const [isPaused, setIsPaused] = useState(false);
+const typeConfig = {
+  mobile:  { icon: Smartphone, label: "Mobile App"  },
+  web:     { icon: Globe,      label: "Web App"      },
+  desktop: { icon: Monitor,    label: "Desktop App"  },
+};
 
+// ── Responsive sizes ───────────────────────────────────────────────────────────
+function useCoverflowConfig() {
+  const [vw, setVw] = useState(0);
+
+  useEffect(() => {
+    const update = () => setVw(window.innerWidth);
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+
+  const isMobile = vw > 0 && vw < 600;
+  const isTablet = vw >= 600 && vw < 960;
+
+  return {
+    phoneW: isMobile ? 148 : 188,
+    phoneH: isMobile ? 302 : 384,
+    isMobile,
+    isTablet,
+  };
+}
+
+// ── 3D transform per card offset ──────────────────────────────────────────────
+function getTransform(
+  offset: number,
+  isMobile: boolean,
+  isTablet: boolean,
+) {
+  const abs = Math.abs(offset);
+  const dir = offset > 0 ? 1 : -1;
+
+  if (abs === 0)
+    return { x: 0,         rotateY: 0,        scale: 1,    opacity: 1,    z: 80, zIdx: 20 };
+
+  if (isMobile) return null;   // mobile: only center card
+
+  if (abs === 1)
+    return { x: dir * (isTablet ? 158 : 192), rotateY: dir * -54, scale: isTablet ? 0.75 : 0.78, opacity: 0.72, z: 30, zIdx: 15 };
+
+  if (!isTablet && abs === 2)
+    return { x: dir * 322, rotateY: dir * -70, scale: 0.62, opacity: 0.38, z: 8, zIdx: 10 };
+
+  return null;
+}
+
+// ── Phone frame with screenshot inside ────────────────────────────────────────
+function PhoneCard({
+  project,
+  idx,
+  phoneW,
+  phoneH,
+}: {
+  project: (typeof projectsData)[0];
+  idx: number;
+  phoneW: number;
+  phoneH: number;
+}) {
+  const pal    = palettes[idx % palettes.length];
+  const pad    = Math.round(phoneW * 0.043);      // 8px on 188
+  const rOuter = Math.round(phoneW * 0.17);       // 32px on 188
+  const rInner = Math.round(phoneW * 0.138);      // 26px on 188
+  const islandW = Math.round(phoneW * 0.43);
+  const islandH = Math.round(phoneW * 0.054);
+  const btnH   = Math.round(phoneH * 0.078);
+
+  return (
+    <div className="relative flex-shrink-0" style={{ width: phoneW, height: phoneH }}>
+      {/* ── Outer shell — NO box-shadow ── */}
+      <div
+        className="absolute inset-0"
+        style={{
+          borderRadius: rOuter,
+          background:   "linear-gradient(160deg, #2d2d32, #101013)",
+          border:       "1px solid rgba(255,255,255,0.10)",
+          padding:      pad,
+        }}
+      >
+        {/* ── Screen ── */}
+        <div
+          className="relative w-full h-full overflow-hidden"
+          style={{ borderRadius: rInner }}
+        >
+          {/* Screenshot image */}
+          <Image
+            src={project.screenshot}
+            alt={project.title}
+            fill
+            sizes={`${phoneW}px`}
+            className="object-cover"
+            unoptimized
+          />
+
+          {/* Dynamic island overlay */}
+          <div
+            className="absolute z-10"
+            style={{
+              top:       Math.round(phoneW * 0.04),
+              left:      "50%",
+              transform: "translateX(-50%)",
+              width:     islandW,
+              height:    islandH,
+              background:"#000",
+              borderRadius: 999,
+            }}
+          />
+
+          {/* Subtle top gradient for visibility */}
+          <div
+            className="absolute inset-x-0 top-0 z-[5]"
+            style={{
+              height: "18%",
+              background: "linear-gradient(to bottom, rgba(0,0,0,0.35), transparent)",
+            }}
+          />
+          {/* Bottom gradient */}
+          <div
+            className="absolute inset-x-0 bottom-0 z-[5]"
+            style={{
+              height: "12%",
+              background: "linear-gradient(to top, rgba(0,0,0,0.30), transparent)",
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Power button */}
+      <div
+        className="absolute rounded-l-full"
+        style={{
+          right:      -1,
+          top:        phoneH * 0.28,
+          width:      2,
+          height:     btnH,
+          background: "rgba(255,255,255,0.10)",
+        }}
+      />
+      {/* Volume buttons */}
+      {[0.22, 0.32].map((t, i) => (
+        <div
+          key={i}
+          className="absolute rounded-r-full"
+          style={{
+            left:       -1,
+            top:        phoneH * t,
+            width:      2,
+            height:     Math.round(btnH * 0.75),
+            background: "rgba(255,255,255,0.10)",
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+// ── Main section ───────────────────────────────────────────────────────────────
+export default function Projects() {
+  const [active, setActive] = useState(0);
+  const [paused, setPaused]  = useState(false);
+  const dragStartX = useRef(0);
   const total = projectsData.length;
 
-  const go = useCallback(
-    (next: number, dir: number) => {
-      setDirection(dir);
-      setCurrent(((next % total) + total) % total);
-    },
-    [total]
-  );
+  const { phoneW, phoneH, isMobile, isTablet } = useCoverflowConfig();
 
-  const prev = () => go(current - 1, -1);
-  const next = () => go(current + 1, 1);
+  const go = useCallback(
+    (dir: 1 | -1) => setActive((p) => ((p + dir + total) % total)),
+    [total],
+  );
 
   // Auto-advance
   useEffect(() => {
-    if (isPaused) return;
-    const t = setInterval(() => go(current + 1, 1), 4500);
+    if (paused) return;
+    const t = setInterval(() => go(1), 4000);
     return () => clearInterval(t);
-  }, [current, isPaused, go]);
+  }, [paused, go]);
 
-  // Get visible card indices (current, prev, next) for the 3-up desktop view
-  const getVisible = () => {
-    const prev = ((current - 1) + total) % total;
-    const next = (current + 1) % total;
-    return [prev, current, next];
-  };
+  // Touch / drag swipe
+  const handleDragEnd = useCallback(
+    (_: unknown, info: PanInfo) => {
+      if (info.offset.x < -40)       go(1);
+      else if (info.offset.x > 40)   go(-1);
+    },
+    [go],
+  );
 
-  const variants = {
-    enter: (dir: number) => ({ x: dir > 0 ? 300 : -300, opacity: 0, scale: 0.92 }),
-    center: { x: 0, opacity: 1, scale: 1 },
-    exit: (dir: number) => ({ x: dir > 0 ? -300 : 300, opacity: 0, scale: 0.92 }),
-  };
-
-  const project = projectsData[current];
-  const typeInfo = typeIcons[project.type];
-  const TypeIcon = typeInfo.icon;
+  const project  = projectsData[active];
+  const pal      = palettes[active % palettes.length];
+  const cfg      = typeConfig[project.type];
+  const TypeIcon = cfg.icon;
+  const stageH   = phoneH + 24;
 
   return (
     <section id="projects" className="section-padding bg-white overflow-hidden">
       <div className="container-max">
-        {/* Header */}
-        <FadeIn className="text-center mb-16">
+
+        {/* ── Header ── */}
+        <FadeIn className="text-center mb-10 sm:mb-12">
           <span className="text-sm font-semibold text-indigo-600 uppercase tracking-widest">
             Portfolio
           </span>
           <h2 className="mt-2 text-3xl sm:text-4xl font-bold text-gray-900">
-            Things I&apos;ve built
+            Things I&apos;ve Built
           </h2>
-          <p className="mt-4 text-gray-500 max-w-xl mx-auto">
-            Mobile apps, web platforms, and desktop tools — a selection of my best work.
+          <p className="mt-3 text-gray-400 text-sm max-w-sm mx-auto">
+            Tap a side card or swipe to browse — click the button for full details.
           </p>
         </FadeIn>
 
-        {/* Desktop 3-card preview */}
-        <div className="hidden lg:flex items-center justify-center gap-5 mb-10">
-          {getVisible().map((idx, pos) => {
-            const p = projectsData[idx];
-            const isCenter = pos === 1;
-            const ti = typeIcons[p.type];
-            const TIcon = ti.icon;
+        {/* ── Coverflow stage ── */}
+        <motion.div
+          className="relative overflow-hidden cursor-grab active:cursor-grabbing"
+          style={{ height: stageH, perspective: "1100px" }}
+          drag="x"
+          dragConstraints={{ left: 0, right: 0 }}
+          dragElastic={0.1}
+          onDragEnd={handleDragEnd}
+          onHoverStart={() => setPaused(true)}
+          onHoverEnd={() => setPaused(false)}
+        >
+          {projectsData.map((p, i) => {
+            const offset = i - active;
+            const t      = getTransform(offset, isMobile, isTablet);
+            if (!t) return null;
+
             return (
               <motion.div
-                key={idx}
-                animate={{
-                  scale: isCenter ? 1 : 0.88,
-                  opacity: isCenter ? 1 : 0.55,
-                  y: isCenter ? 0 : 20,
+                key={i}
+                className="absolute"
+                style={{
+                  left:       "50%",
+                  top:        "50%",
+                  marginLeft: -(phoneW / 2),
+                  marginTop:  -(phoneH / 2),
+                  zIndex:     t.zIdx,
+                  cursor:     offset !== 0 ? "pointer" : "default",
+                  pointerEvents: "auto",
                 }}
-                transition={{ duration: 0.4, ease: [0.21, 0.47, 0.32, 0.98] }}
-                onClick={() => !isCenter && go(idx, pos === 0 ? -1 : 1)}
-                className={`w-80 flex-shrink-0 rounded-2xl border bg-gradient-to-br ${cardColors[idx % cardColors.length]} p-6 flex flex-col gap-4 ${!isCenter ? "cursor-pointer" : ""}`}
+                animate={{
+                  x:       t.x,
+                  rotateY: t.rotateY,
+                  scale:   t.scale,
+                  opacity: t.opacity,
+                  z:       t.z,
+                }}
+                transition={{ type: "spring", stiffness: 260, damping: 28 }}
+                onClick={() => offset !== 0 && setActive(i)}
               >
-                <div className="flex items-start justify-between">
-                  <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${ti.color}`}>
-                    <TIcon size={12} />
-                    {ti.label}
-                  </div>
-                  <span className="text-3xl">{p.emoji}</span>
-                </div>
-                <div>
-                  <h3 className="font-bold text-gray-900 text-lg leading-tight">{p.title}</h3>
-                  <p className="mt-1.5 text-sm text-gray-500 line-clamp-3">{p.description}</p>
-                </div>
-                <div className="flex flex-wrap gap-1.5 mt-auto">
-                  {p.tags.slice(0, 3).map((t) => (
-                    <Badge key={t} variant="secondary" className="text-xs bg-white/60 text-gray-600">
-                      {t}
-                    </Badge>
-                  ))}
-                  {p.tags.length > 3 && (
-                    <Badge variant="secondary" className="text-xs bg-white/60 text-gray-500">
-                      +{p.tags.length - 3}
-                    </Badge>
-                  )}
-                </div>
+                <PhoneCard project={p} idx={i} phoneW={phoneW} phoneH={phoneH} />
               </motion.div>
             );
           })}
-        </div>
+        </motion.div>
 
-        {/* Mobile / Focused card */}
-        <div
-          className="relative max-w-lg mx-auto"
-          onMouseEnter={() => setIsPaused(true)}
-          onMouseLeave={() => setIsPaused(false)}
-        >
-          <AnimatePresence mode="popLayout" custom={direction}>
-            <motion.div
-              key={current}
-              custom={direction}
-              variants={variants}
-              initial="enter"
-              animate="center"
-              exit="exit"
-              transition={{ duration: 0.4, ease: [0.21, 0.47, 0.32, 0.98] }}
-              className={`rounded-3xl border border-gray-100 bg-gradient-to-br ${cardColors[current % cardColors.length]} p-7 shadow-lg`}
-            >
-              {/* Type + emoji header */}
-              <div className="flex items-start justify-between mb-5">
-                <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold ${typeInfo.color}`}>
-                  <TypeIcon size={13} />
-                  {typeInfo.label}
-                </div>
-                <motion.span
-                  className="text-5xl"
-                  animate={{ rotate: [0, 8, -8, 0] }}
-                  transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-                >
-                  {project.emoji}
-                </motion.span>
-              </div>
+        {/* ── Controls + project info ── */}
+        <div className="mt-7 sm:mt-8 flex flex-col items-center gap-4 sm:gap-5">
 
-              {/* Title + description */}
-              <h3 className="text-xl font-bold text-gray-900 mb-2">{project.title}</h3>
-              <p className="text-sm text-gray-600 leading-relaxed mb-5">{project.description}</p>
-
-              {/* Tags */}
-              <div className="flex flex-wrap gap-2 mb-6">
-                {project.tags.map((tag) => (
-                  <Badge key={tag} variant="secondary" className="text-xs bg-white/70 text-gray-600 backdrop-blur-sm">
-                    {tag}
-                  </Badge>
-                ))}
-              </div>
-
-              {/* Links */}
-              <div className="flex gap-3">
-                {project.liveUrl && (
-                  <Button
-                    size="sm"
-                    className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white gap-1.5 rounded-xl"
-                    asChild
-                  >
-                    <a href={project.liveUrl} target="_blank" rel="noopener noreferrer">
-                      <ExternalLink size={13} />
-                      Live Demo
-                    </a>
-                  </Button>
-                )}
-                {project.githubUrl && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="flex-1 gap-1.5 rounded-xl border-white/60 bg-white/60 hover:bg-white backdrop-blur-sm"
-                    asChild
-                  >
-                    <a href={project.githubUrl} target="_blank" rel="noopener noreferrer">
-                      <Github size={13} />
-                      Source
-                    </a>
-                  </Button>
-                )}
-              </div>
-            </motion.div>
-          </AnimatePresence>
-
-          {/* Nav arrows */}
-          <button
-            onClick={prev}
-            className="absolute -left-5 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white border border-gray-200 shadow-md flex items-center justify-center text-gray-500 hover:text-indigo-600 hover:border-indigo-200 hover:shadow-lg transition-all duration-200 z-10"
-            aria-label="Previous project"
-          >
-            <ChevronLeft size={18} />
-          </button>
-          <button
-            onClick={next}
-            className="absolute -right-5 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white border border-gray-200 shadow-md flex items-center justify-center text-gray-500 hover:text-indigo-600 hover:border-indigo-200 hover:shadow-lg transition-all duration-200 z-10"
-            aria-label="Next project"
-          >
-            <ChevronRight size={18} />
-          </button>
-        </div>
-
-        {/* Dot indicators */}
-        <div className="flex items-center justify-center gap-2 mt-8">
-          {projectsData.map((_, i) => (
+          {/* Arrows + dots */}
+          <div className="flex items-center gap-3 sm:gap-4">
             <button
-              key={i}
-              onClick={() => go(i, i > current ? 1 : -1)}
-              className={`rounded-full transition-all duration-300 ${
-                i === current
-                  ? "w-6 h-2 bg-indigo-600"
-                  : "w-2 h-2 bg-gray-300 hover:bg-indigo-300"
-              }`}
-              aria-label={`Go to project ${i + 1}`}
-            />
-          ))}
+              onClick={() => { setPaused(true); go(-1); }}
+              className="w-9 h-9 rounded-full bg-gray-100 hover:bg-indigo-50 border border-gray-200 hover:border-indigo-200 flex items-center justify-center text-gray-500 hover:text-indigo-600 transition-all duration-200"
+              aria-label="Previous"
+            >
+              <ChevronLeft size={16} />
+            </button>
+
+            <div className="flex items-center gap-1.5">
+              {projectsData.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => { setPaused(true); setActive(i); }}
+                  className="rounded-full transition-all duration-300"
+                  style={{
+                    width:      i === active ? 22 : 7,
+                    height:     7,
+                    background: i === active ? pal.a : "#D1D5DB",
+                  }}
+                  aria-label={`Go to project ${i + 1}`}
+                />
+              ))}
+            </div>
+
+            <button
+              onClick={() => { setPaused(true); go(1); }}
+              className="w-9 h-9 rounded-full bg-gray-100 hover:bg-indigo-50 border border-gray-200 hover:border-indigo-200 flex items-center justify-center text-gray-500 hover:text-indigo-600 transition-all duration-200"
+              aria-label="Next"
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
+
+          {/* Active project info */}
+          <motion.div
+            key={active}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.28, ease: "easeOut" }}
+            className="text-center px-4 w-full max-w-md"
+          >
+            {/* Type badge */}
+            <span
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold mb-2"
+              style={{ background: `${pal.a}14`, color: pal.a }}
+            >
+              <TypeIcon size={10} />
+              {cfg.label}
+            </span>
+
+            <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-1">
+              {project.title}
+            </h3>
+
+            <p className="text-xs sm:text-sm text-gray-400 leading-relaxed mb-3 line-clamp-2">
+              {project.description}
+            </p>
+
+            {/* Tags */}
+            <div className="flex flex-wrap justify-center gap-1.5 mb-4">
+              {project.tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="text-[10px] sm:text-[11px] px-2 py-0.5 rounded-full font-semibold"
+                  style={{ background: `${pal.a}12`, color: pal.a }}
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+
+            {/* CTA */}
+            <Link
+              href={`/projects/${project.slug}`}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-opacity hover:opacity-90"
+              style={{ background: `linear-gradient(135deg, ${pal.a}, ${pal.b})` }}
+            >
+              View Case Study
+              <ArrowUpRight size={14} />
+            </Link>
+          </motion.div>
+
+          <p className="text-xs text-gray-300 font-medium tracking-wide">
+            {active + 1} / {total}
+          </p>
         </div>
 
-        {/* Counter */}
-        <p className="text-center text-xs text-gray-400 mt-3 font-medium">
-          {current + 1} / {total}
-        </p>
       </div>
     </section>
   );
